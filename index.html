@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Draw - FINAL GOLD</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial;touch-action:none}
+body{background:#fff;overflow:hidden;height:100vh}
+#top{position:fixed;top:0;left:0;right:0;background:#fff;padding:6px 8px;display:flex;flex-direction:column;gap:6px;z-index:20;border-bottom:1px solid #dbdbdb}
+#top .row1{display:flex;align-items:center;gap:6px}
+#top .row1 b{font-size:15px}
+#top .row1 .right{margin-left:auto;display:flex;gap:4px}
+#top .row1 .right button{border:none;background:#efefef;padding:6px 8px;border-radius:7px;font-weight:600;cursor:pointer;font-size:12px}
+.tabs{display:flex;gap:4px;background:#efefef;padding:3px;border-radius:20px;overflow-x:auto;white-space:nowrap}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{border:none;padding:6px 10px;border-radius:15px;font-weight:700;font-size:12px;cursor:pointer;background:transparent;flex-shrink:0}
+.tabs button.active{background:#000;color:#fff}
+#canvas{position:fixed;top:82px;left:0;right:0;bottom:0;width:100%;height:calc(100% - 82px);background:#fff;display:block}
+#fab{position:fixed;left:12px;top:100px;z-index:30;width:56px;height:56px;border-radius:50%;border:none;background:#000;color:#fff;font-size:28px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,.3)}
+#panel{position:fixed;left:0;right:0;top:82px;z-index:30;background:#fff;border-bottom:1px solid #dbdbdb;padding:14px 14px 16px;box-shadow:0 8px 25px rgba(0,0,0,.15);display:none;max-height:65vh;overflow-y:auto}
+#panel.show{display:block}
+#panel h4{font-size:12px;color:#888;margin:12px 0 6px}
+#panel h4:first-child{margin-top:0}
+.tools{display:flex;gap:6px;flex-wrap:wrap}
+.tools button{flex:1;min-width:52px;padding:10px 0;border:2px solid #eee;background:#f5f5f5;border-radius:12px;font-size:20px;cursor:pointer}
+.tools button.active{border-color:#000;background:#fff}
+.tools button small{display:block;font-size:9px;font-weight:700}
+.colors{display:flex;gap:6px;flex-wrap:wrap}
+.colors div{width:32px;height:32px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.colors div.active{border-color:#000;transform:scale(1.1)}
+#sizeSlider{width:100%;accent-color:#000}
+.hint{font-size:11px;color:#888;margin-top:6px;line-height:1.4}
+#panelDone{position:sticky;bottom:0;left:0;right:0;width:100%;padding:12px;margin-top:12px;border:none;background:#000;color:#fff;border-radius:10px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="top">
+<div class="row1"><b>🎨 Draw</b><div class="right"><button onclick="undo()">↩ Undo</button><button onclick="clearCanvas()">🗑 Clear</button><button onclick="saveDrawing()" style="background:#0095f6;color:#fff">💾 Save</button></div></div>
+<div class="tabs">
+<button class="active" id="tab-normal" onclick="setTemplate('normal')">✏️ Normal</button>
+<button id="tab-trading" onclick="setTemplate('trading')">📈 Trading</button>
+<button id="tab-drawing" onclick="setTemplate('drawing')">🎨 Drawing</button>
+</div>
+</div>
+<canvas id="canvas"></canvas>
+<button id="fab" onclick="togglePanel()">✏️</button>
+<div id="panel">
+  <!-- 1. SIZE - SABSE UPAR -->
+  <h4>📏 SIZE - <span id="sizeVal">3.5 px</span></h4>
+  <input type="range" id="sizeSlider" min="1" max="15" value="3.5" step="0.5" oninput="setSize(this.value)">
+  <!-- 2. TOOL -->
+  <div id="panel-normal">
+    <h4>✏️ NORMAL TOOLS</h4>
+    <div class="tools">
+      <button class="active" id="n-pencil" onclick="setTool('pencil')">✏️<small>Pencil</small></button>
+      <button id="n-pen" onclick="setTool('pen')">🖊️<small>Pen</small></button>
+      <button id="n-brush" onclick="setTool('brush')">🖌️<small>Brush</small></button>
+      <button id="n-eraser" onclick="setTool('eraser')">🧽<small>Eraser</small></button>
+    </div>
+  </div>
+  <div id="panel-trading" style="display:none">
+    <h4>📈 TRADING TOOLS</h4>
+    <div class="tools">
+      <button id="t-candle-green" onclick="setTool('candleGreen')">🟢<small>Green Candle</small></button>
+      <button id="t-candle-red" onclick="setTool('candleRed')">🔴<small>Red Candle</small></button>
+      <button id="t-box" onclick="setTool('box')">⬜<small>Box</small></button>
+      <button id="t-line" onclick="setTool('line')">📈<small>Trend Line</small></button>
+      <button id="t-pencil" onclick="setTool('pencil')">✏️<small>Pencil</small></button>
+      <button id="t-eraser" onclick="setTool('eraser')">🧽<small>Eraser</small></button>
+    </div>
+    <div class="hint">• <b>Candle:</b> Drag karo - candle ban jayegi<br>• <b>Box:</b> Dark outline, Light inside, see-through<br>• <b>Trend Line:</b> Drag karo - seedhi line</div>
+  </div>
+  <div id="panel-drawing" style="display:none">
+    <h4>🎨 DRAWING TOOLS</h4>
+    <div class="tools">
+      <button id="d-blend" onclick="setTool('blend')">💨<small>Blend</small></button>
+      <button id="d-erase" onclick="setTool('eraser')">🧽<small>Erase</small></button>
+      <button id="d-pencil" onclick="setTool('pencil')">✏️<small>Pencil</small></button>
+      <button id="d-pen" onclick="setTool('pen')">🖊️<small>Pen</small></button>
+    </div>
+  </div>
+  <!-- 3. COLOUR -->
+  <h4>🎨 COLOUR - All Dark</h4>
+  <div class="colors">
+    <div style="background:#000000" onclick="setColor('#000000',this)"></div>
+    <div style="background:#FF1A1A" class="active" onclick="setColor('#FF1A1A',this)"></div>
+    <div style="background:#FF3B00" onclick="setColor('#FF3B00',this)"></div>
+    <div style="background:#E6A800" onclick="setColor('#E6A800',this)"></div>
+    <div style="background:#008000" onclick="setColor('#008000',this)"></div>
+    <div style="background:#0033CC" onclick="setColor('#0033CC',this)"></div>
+    <div style="background:#4B0082" onclick="setColor('#4B0082',this)"></div>
+    <div style="background:#CC0055" onclick="setColor('#CC0055',this)"></div>
+  </div>
+  <input type="color" id="customColor" value="#FF1A1A" onchange="setColor(this.value,null)" style="width:100%;height:32px;margin-top:6px;border:none">
+  <!-- DONE - SAB ME - STICKY -->
+  <button id="panelDone" onclick="togglePanel()">Done ✅</button>
+</div>
+<script>
+let canvas=document.getElementById('canvas'), ctx=canvas.getContext('2d');
+let drawing=false, lastX=0, lastY=0, startX=0, startY=0, tool='pen', color='#FF1A1A', size=3.5, history=[], template='normal', snapshot=null;
+function resize(){ let dpr=window.devicePixelRatio||1; let w=canvas.clientWidth,h=canvas.clientHeight; canvas.width=w*dpr; canvas.height=h*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h); }
+window.addEventListener('resize', resize); resize();
+function togglePanel(){ document.getElementById('panel').classList.toggle('show'); }
+function setTemplate(t){
+  template=t;
+  ['normal','trading','drawing'].forEach(x=>{
+    document.getElementById('tab-'+x).classList.toggle('active',x===t);
+    document.getElementById('panel-'+x).style.display = x===t ? 'block':'none';
+  });
+  if(t==='trading') setTool('candleGreen');
+  if(t==='drawing') setTool('blend');
+  if(t==='normal') setTool('pen');
+  document.getElementById('fab').innerText = t==='trading'?'📈':t==='drawing'?'🎨':'✏️';
+  if(!document.getElementById('panel').classList.contains('show')) document.getElementById('panel').classList.add('show');
+}
+let fab=document.getElementById('fab'), drag=false, dx=0, dy=0;
+fab.addEventListener('mousedown', e=>{ drag=true; dx=e.clientX-fab.getBoundingClientRect().left; dy=e.clientY-fab.getBoundingClientRect().top; });
+document.addEventListener('mousemove', e=>{ if(!drag) return; fab.style.left=Math.max(0,Math.min(innerWidth-60, e.clientX-dx))+'px'; fab.style.top=Math.max(90,Math.min(innerHeight-70, e.clientY-dy))+'px'; });
+document.addEventListener('mouseup', ()=>drag=false);
+fab.addEventListener('touchstart', e=>{ drag=true; dx=e.touches[0].clientX-fab.getBoundingClientRect().left; dy=e.touches[0].clientY-fab.getBoundingClientRect().top; }, {passive:false});
+document.addEventListener('touchmove', e=>{ if(!drag) return; e.preventDefault(); fab.style.left=Math.max(0,Math.min(innerWidth-60, e.touches[0].clientX-dx))+'px'; fab.style.top=Math.max(90,Math.min(innerHeight-70, e.touches[0].clientY-dy))+'px'; }, {passive:false});
+document.addEventListener('touchend', ()=>drag=false);
+function setTool(t){
+  tool=t;
+  document.querySelectorAll('.tools button').forEach(b=>b.classList.remove('active'));
+  let map={'pencil':template==='trading'?'t-pencil':template==='drawing'?'d-pencil':'n-pencil','pen':template==='drawing'?'d-pen':'n-pen','brush':'n-brush','eraser':template==='trading'?'t-eraser':template==='drawing'?'d-erase':'n-eraser','blend':'d-blend','candleGreen':'t-candle-green','candleRed':'t-candle-red','box':'t-box','line':'t-line'};
+  if(map[t] && document.getElementById(map[t])) document.getElementById(map[t]).classList.add('active');
+  if(t==='pencil') size=3.5; if(t==='pen') size=3.5; if(t==='brush') size=12; if(t==='blend') size=18; if(t==='eraser') size=25; if(t==='candleGreen'||t==='candleRed') size=14; if(t==='box') size=2.5; if(t==='line') size=2.5;
+  document.getElementById('sizeSlider').value=size; document.getElementById('sizeVal').innerText=size+' px';
+}
+function setColor(c,el){ color=c; document.querySelectorAll('.colors div').forEach(d=>d.classList.remove('active')); if(el) el.classList.add('active'); document.getElementById('customColor').value=c; if(tool==='eraser') setTool('pen'); }
+function setSize(s){ size=parseFloat(s); document.getElementById('sizeVal').innerText=s+' px'; }
+function saveState(){ history.push(ctx.getImageData(0,0,canvas.width,canvas.height)); if(history.length>30) history.shift(); }
+function undo(){ if(history.length>0) ctx.putImageData(history.pop(),0,0); }
+function clearCanvas(){ saveState(); ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); }
+function saveDrawing(){ let a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='drawing.png'; a.click(); }
+function getPos(e){ let r=canvas.getBoundingClientRect(); let x=e.touches?e.touches[0].clientX-r.left:e.clientX-r.left; let y=e.touches?e.touches[0].clientY-r.top:e.clientY-r.top; return {x,y}; }
+function start(e){ e.preventDefault(); saveState(); drawing=true; let p=getPos(e); lastX=p.x; lastY=p.y; startX=p.x; startY=p.y; snapshot=ctx.getImageData(0,0,canvas.width,canvas.height); if(['pencil','pen','brush','blend','eraser'].includes(tool)){ ctx.beginPath(); ctx.arc(lastX,lastY,size/2,0,Math.PI*2); ctx.fillStyle=tool==='eraser'?'#fff':tool==='blend'?'rgba(255,255,255,0.15)':color; ctx.fill(); } }
+function draw(e){
+  if(!drawing) return; e.preventDefault(); let p=getPos(e);
+  if(['candleGreen','candleRed','box','line'].includes(tool)){
+    ctx.putImageData(snapshot,0,0);
+    if(tool==='candleGreen'||tool==='candleRed'){
+      let isGreen=tool==='candleGreen'; let w=size; let h=Math.abs(p.y-startY); let top=Math.min(startY,p.y); let cx=startX;
+      ctx.globalAlpha=1; ctx.fillStyle=isGreen?'#008000':'#FF1A1A'; ctx.strokeStyle=isGreen?'#004d00':'#990000'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(cx, top-12); ctx.lineTo(cx, top+h+12); ctx.stroke();
+      ctx.fillRect(cx-w/2, top, w, Math.max(h,8)); ctx.strokeRect(cx-w/2, top, w, Math.max(h,8));
+    } else if(tool==='box'){
+      let x=Math.min(startX,p.x), y=Math.min(startY,p.y), w=Math.abs(p.x-startX), h=Math.abs(p.y-startY);
+      ctx.globalAlpha=0.15; ctx.fillStyle=color; ctx.fillRect(x,y,w,h);
+      ctx.globalAlpha=1; ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.strokeRect(x,y,w,h);
+    } else if(tool==='line'){
+      ctx.globalAlpha=1; ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(startX,startY); ctx.lineTo(p.x,p.y); ctx.stroke();
+    }
+    return;
+  }
+  ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(p.x,p.y); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalAlpha=1;
+  if(tool==='eraser'){ ctx.strokeStyle='#fff'; ctx.lineWidth=size; }
+  else if(tool==='blend'){ ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=size; }
+  else { ctx.strokeStyle=color; ctx.lineWidth=size; }
+  ctx.stroke(); ctx.globalAlpha=1; lastX=p.x; lastY=p.y;
+}
+function stop(e){ if(!drawing) return; drawing=false; }
+canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseup', stop);
+canvas.addEventListener('touchstart', start, {passive:false}); canvas.addEventListener('touchmove', draw, {passive:false}); canvas.addEventListener('touchend', stop);
+canvas.addEventListener('click', ()=>{ document.getElementById('panel').classList.remove('show'); });
+</script>
+</body>
+</html>
